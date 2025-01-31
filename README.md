@@ -138,6 +138,25 @@ const App = auto(() => {
 So the store could be a global variable instead of a React prop.
 It doesn't matter where the state is from, as long as it is managed by manate.
 
+You can also use class components with manate:
+
+```tsx
+import { Component } from "manate/react";
+
+class App extends Component<{ store: Store }> {
+  render() {
+    const { store } = props;
+    return (
+      <div>
+        <Button onClick={() => store.count -= 1}>-</Button>
+        {store.count}
+        <Button onClick={() => store.increase()}>+</Button>
+      </div>
+    );
+  }
+}
+```
+
 ## Read events & Write events
 
 From manate's point of view, there are only two kinds of events: read events and write events.

@@ -1,16 +1,13 @@
 // @vitest-environment jsdom
 import { act, cleanup, render } from '@testing-library/react';
 import React from 'react';
-import { describe, expect, test } from 'vitest';
-
+import { describe, expect, test, afterEach } from 'vitest';
 import { manage } from '../src';
-import { auto } from '../src/react';
+import { auto, Component } from '../src/react';
 
 let id = 0;
-
 class Bullet {
   public id: number;
-
   public constructor() {
     this.id = id++;
   }
@@ -21,6 +18,7 @@ class Store {
 }
 
 let count = 0;
+
 const BulletComponent = auto(
   (props: { bullet: Bullet; position: [number, number, number] }) => {
     count += 1;
@@ -30,36 +28,53 @@ const BulletComponent = auto(
 );
 
 const position: [number, number, number] = [0, 0, 0];
-const App = auto((props: { store: Store }) => {
+
+// Functional App component
+const FunctionalApp = auto((props: { store: Store }) => {
   const { store } = props;
   return Object.values(store.bullets).map((bullet) => (
     <BulletComponent key={bullet.id} bullet={bullet} position={position} />
-    // <BulletComponent key={bullet.id} bullet={bullet} position={[0, 0, 0]} /> // this will cause the test to fail, it will cause lots of re-renders
   ));
 });
+
+// Class App component
+class ClassApp extends Component<{ store: Store }> {
+  render() {
+    const { store } = this.props;
+    return Object.values(store.bullets).map((bullet) => (
+      <BulletComponent key={bullet.id} bullet={bullet} position={position} />
+    ));
+  }
+}
 
 const store = manage(new Store());
 
 describe('React Game', () => {
-  test('default', async () => {
-    render(<App store={store} />);
-    expect(count).toBe(0);
-    act(() => {
-      store.bullets[0] = new Bullet();
-    });
-    expect(count).toBe(1);
-    act(() => {
-      store.bullets[1] = new Bullet();
-    });
-    expect(count).toBe(2);
-    act(() => {
-      store.bullets[2] = new Bullet();
-    });
-    expect(count).toBe(3);
-    act(() => {
-      store.bullets[3] = new Bullet();
-    });
-    expect(count).toBe(4);
+  const testCases = [
+    { name: 'Functional component', Component: FunctionalApp },
+    { name: 'Class component', Component: ClassApp },
+  ];
+
+  afterEach(() => {
     cleanup();
+    count = 0;
+    store.bullets = {};
+  });
+
+  testCases.forEach(({ name, Component }) => {
+    test(name, async () => {
+      render(
+
+        <Component store={store} />
+      );
+      expect(count).toBe(0);
+
+      for (let i = 0; i < 4; i++) {
+        act(() => {
+          store.bullets[i] = new Bullet();
+        });
+        expect(count).toBe(i + 1);
+      }
+    });
   });
 });
